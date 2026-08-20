@@ -1,4 +1,3 @@
-// api/utils.js — Shared utilities for all Vercel API endpoints
 const fetch = require("node-fetch");
 
 const SHEET_URL =
@@ -8,10 +7,23 @@ let dataset = null;
 
 /* Build JustFix WhoOwnsWhat URL dynamically */
 function buildJustFixURL(record) {
-  const borough = encodeURIComponent(record.BOROUGH.toUpperCase());
-  const number = encodeURIComponent(record.BUILDING_NO);
-  const street = encodeURIComponent(record.STREET.toUpperCase());
+  const borough = encodeURIComponent(record.BOROUGH?.toUpperCase() || "");
+  const number = encodeURIComponent(record.BUILDING_NO || "");
+  const street = encodeURIComponent(record.STREET?.toUpperCase() || "");
   return `https://whoownswhat.justfix.org/en/address/${borough}/${number}/${street}`;
+}
+
+/* Validate record before flattening */
+function isValidRecord(record) {
+  return (
+    record &&
+    record.BUILDING_NO &&
+    record.STREET &&
+    record.BOROUGH &&
+    record.BUILDING_NO.trim() !== "" &&
+    record.STREET.trim() !== "" &&
+    record.BOROUGH.trim() !== ""
+  );
 }
 
 /* Load dataset once per cold start */
@@ -20,7 +32,14 @@ async function loadDataset() {
 
   const res = await fetch(SHEET_URL);
   const json = await res.json();
-  dataset = expandBuildingRanges(json).map(flattenRecord);
+
+  const expanded = expandBuildingRanges(json);
+
+  // 🔥 Only flatten VALID records
+  dataset = expanded
+    .filter(isValidRecord)
+    .map(flattenRecord);
+
   return dataset;
 }
 
@@ -30,8 +49,10 @@ function expandBuildingRanges(data) {
 
   for (const row of data) {
     const raw = row.BUILDING_NO;
+
     if (!raw || typeof raw !== "string") {
-      final.push(row);
+      // keep row only if valid
+      if (isValidRecord(row)) final.push(row);
       continue;
     }
 
@@ -44,10 +65,13 @@ function expandBuildingRanges(data) {
       const step = start <= end ? 1 : -1;
 
       for (let n = start; step > 0 ? n <= end : n >= end; n += step) {
-        final.push({ ...row, BUILDING_NO: n.toString() });
+        const newRow = { ...row, BUILDING_NO: n.toString() };
+        if (isValidRecord(newRow)) final.push(newRow);
       }
     } else {
-      final.push({ ...row, BUILDING_NO: cleaned });
+      if (isValidRecord({ ...row, BUILDING_NO: cleaned })) {
+        final.push({ ...row, BUILDING_NO: cleaned });
+      }
     }
   }
 
@@ -58,22 +82,22 @@ function expandBuildingRanges(data) {
 function flattenRecord(record) {
   return {
     rent_stabilized: true,
-    no: record.no,
-    building_no: record.BUILDING_NO,
-    street: record.STREET,
-    borough: record.BOROUGH,
-    zip: record.ZIP,
-    city: record.CITY,
-    county: record.COUNTY,
-    block: record.BLOCK,
-    lot: record.LOT,
-    borough_code: record.Borough_Code,
-    latitude: record.LATITUDE,
-    longitude: record.LONGITUDE,
-    status1: record.STATUS1,
-    status2: record.STATUS2,
-    status3: record.STATUS3,
-    displacement_alert: record.Borough_Block_Lot,
+    no: record.no || "",
+    building_no: record.BUILDING_NO || "",
+    street: record.STREET || "",
+    borough: record.BOROUGH || "",
+    zip: record.ZIP || "",
+    city: record.CITY || "",
+    county: record.COUNTY || "",
+    block: record.BLOCK || "",
+    lot: record.LOT || "",
+    borough_code: record.Borough_Code || "",
+    latitude: record.LATITUDE || "",
+    longitude: record.LONGITUDE || "",
+    status1: record.STATUS1 || "",
+    status2: record.STATUS2 || "",
+    status3: record.STATUS3 || "",
+    displacement_alert: record.Borough_Block_Lot || "https://portal.displacementalert.org/lookup",
     justfix_url_dynamic: buildJustFixURL(record)
   };
 }
