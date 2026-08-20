@@ -1,4 +1,4 @@
-// api/all.js — Vercel Serverless Function (Full Flat JSON Dataset)
+// api/all.js — Full Flat JSON Dataset (Vercel Serverless Function)
 const fetch = require("node-fetch");
 
 const SHEET_URL =
@@ -66,7 +66,7 @@ function flattenRecord(record) {
     status2: record.STATUS2,
     status3: record.STATUS3,
     displacement_alert: record.Borough_Block_Lot,
-    justfix_url: record.JUSTFIX_URL
+    JUSTFIX_URL: record.JUSTFIX_URL
   };
 }
 
