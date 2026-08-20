@@ -6,6 +6,14 @@ const SHEET_URL =
 
 let dataset = null;
 
+/* Build JustFix WhoOwnsWhat URL */
+function buildJustFixURL(record) {
+  const borough = encodeURIComponent(record.BOROUGH.toUpperCase());
+  const number = encodeURIComponent(record.BUILDING_NO);
+  const street = encodeURIComponent(record.STREET.toUpperCase());
+  return `https://whoownswhat.justfix.org/en/address/${borough}/${number}/${street}`;
+}
+
 /* Load dataset once per cold start */
 async function loadDataset() {
   if (dataset) return dataset;
@@ -66,7 +74,7 @@ function flattenRecord(record) {
     status2: record.STATUS2,
     status3: record.STATUS3,
     displacement_alert: record.Borough_Block_Lot,
-    JUSTFIX_URL: record.JUSTFIX_URL
+    justfix_url_dynamic: buildJustFixURL(record)
   };
 }
 

@@ -1,3 +1,4 @@
+// api/utils.js — Shared utilities for all Vercel API endpoints
 const fetch = require("node-fetch");
 
 const SHEET_URL =
@@ -5,6 +6,15 @@ const SHEET_URL =
 
 let dataset = null;
 
+/* Build JustFix WhoOwnsWhat URL dynamically */
+function buildJustFixURL(record) {
+  const borough = encodeURIComponent(record.BOROUGH.toUpperCase());
+  const number = encodeURIComponent(record.BUILDING_NO);
+  const street = encodeURIComponent(record.STREET.toUpperCase());
+  return `https://whoownswhat.justfix.org/en/address/${borough}/${number}/${street}`;
+}
+
+/* Load dataset once per cold start */
 async function loadDataset() {
   if (dataset) return dataset;
 
@@ -14,6 +24,7 @@ async function loadDataset() {
   return dataset;
 }
 
+/* Expand ranges like "1000 TO 1020" */
 function expandBuildingRanges(data) {
   const final = [];
 
@@ -43,6 +54,7 @@ function expandBuildingRanges(data) {
   return final;
 }
 
+/* Flatten record into flat JSON */
 function flattenRecord(record) {
   return {
     rent_stabilized: true,
@@ -62,7 +74,7 @@ function flattenRecord(record) {
     status2: record.STATUS2,
     status3: record.STATUS3,
     displacement_alert: record.Borough_Block_Lot,
-    justfix_url: record.JUSTFIX_URL
+    justfix_url_dynamic: buildJustFixURL(record)
   };
 }
 
